@@ -5,6 +5,8 @@
 # @author: andris jegorov
 # @email: andris@ironsrc.com
 # @description: Aerospike monitoring in datadog script
+# @licence: MIT
+# @copyright (c) 2016 IronSource Mobile
 #
 ###############
 
