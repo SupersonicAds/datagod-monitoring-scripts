@@ -1,0 +1,52 @@
+###############
+#
+# @name: Aerospike monitoring in datadog
+# @version: 2016/04/20
+# @author: andris jegorov
+# @email: andris@ironsrc.com
+# @description: Aerospike monitoring in datadog configuration file
+#
+###############
+
+datadog:                    # datadog configuration
+    host: '192.168.50.30'   # datadog statsd host name or IP
+    port: 8125              # datadog statsd port
+    histogram:              # force histogram type only for numbers
+        command:            # filter by command
+            - latency
+        key:                # filter by key
+            -
+    gauge:                  # force gauge type only for numbers
+        command:            # filter by command
+            -
+        key:                # filter by key
+            - up
+    set:                    # force set type only for numbers
+        command:            # filter by command
+            -
+        key:                # filter by key
+            -
+    counter:                # force counter type only for numbers
+        command:            # filter by command
+            -
+        key:                # filter by key
+            -
+    event:                  # force item as event
+        command:            # filter by command
+            -
+        key:                # filter by key
+            - conflict-resolution-policy
+    defaults:
+        string: True        # send strings as event : yes (True) or not (False)
+        boolean: False      # send boolean as event (True) or number (False)
+        number: 'set'       # possible : gauge , set, counter, histogram
+        events: 
+            enabled: True  # datadog events will be used (True) or not (False)
+            filtered: True # send all strings as events (False), or only from list (True)
+            
+    
+aerospike:                  # aerospike configuration
+    hosts:                  # list of aerospike hosts ( will be monitored 1st connected ), format [ '172.0.0.1', 3000 ]
+        - [ '127.0.0.1', 3000 ]
+        - [ '192.168.50.30', 3000 ]
+debug: True                 # debug mode: enable (True) or disable (False)
