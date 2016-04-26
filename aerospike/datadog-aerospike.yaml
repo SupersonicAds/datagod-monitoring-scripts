@@ -1,7 +1,7 @@
 ###############
 #
-# @name: Aerospike monitoring in datadog
-# @version: 2016/04/20
+# @name: Aerospike monitoring in datadog (using statsd)
+# @version: 2016/04/26
 # @author: andris jegorov
 # @email: andris@ironsrc.com
 # @description: Aerospike monitoring in datadog configuration file
@@ -43,12 +43,17 @@ datadog:                    # datadog configuration
         boolean: False      # send boolean as event (True) or number (False)
         number: 'set'       # possible : gauge , set, counter, histogram
         events: 
-            enabled: True  # datadog events will be used (True) or not (False)
-            filtered: True # send all strings as events (False), or only from list (True)
-            
+            enabled: True   # datadog events will be used (True) or not (False)
+            filtered: True  # send all strings as events (False), or only from list (True)
+        cluster: 
+            check: False    # allow check cluster (True) or not (False)
+            single: True    # check from all nodes (False) or only from arbitrator only (True)
+        instance: 
+            check: True     # allow node check (True) or not (False)
+            all: False      # check all instances (True) or only current (False)
     
 aerospike:                  # aerospike configuration
     hosts:                  # list of aerospike hosts ( will be monitored 1st connected ), format [ '172.0.0.1', 3000 ]
         - [ '127.0.0.1', 3000 ]
         - [ '192.168.50.30', 3000 ]
-debug: True                 # debug mode: enable (True) or disable (False)
+debug: False                 # debug mode: enable (True) or disable (False)
