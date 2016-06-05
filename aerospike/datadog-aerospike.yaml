@@ -13,6 +13,15 @@
 datadog:                    # datadog configuration
     host: '192.168.50.127'   # datadog statsd host name or IP
     port: 8125              # datadog statsd port
+
+aerospike:                  # aerospike configuration
+    hosts:                  # list of aerospike hosts ( will be monitored 1st connected ), format [ '172.0.0.1', 3000 ]
+        - [ '127.0.0.1', 3000 ]
+        - [ '192.168.50.127', 3000 ]
+
+debug: False                 # debug mode: enable (True) or disable (False)
+
+checks:
     histogram:              # force histogram type only for numbers
         command:            # filter by command
             - latency
@@ -52,8 +61,3 @@ datadog:                    # datadog configuration
             check: True     # allow node check (True) or not (False)
             all: False      # check all instances (True) or only current (False)
     
-aerospike:                  # aerospike configuration
-    hosts:                  # list of aerospike hosts ( will be monitored 1st connected ), format [ '172.0.0.1', 3000 ]
-        - [ '127.0.0.1', 3000 ]
-        - [ '192.168.50.127', 3000 ]
-debug: False                 # debug mode: enable (True) or disable (False)

@@ -1,0 +1,42 @@
+datadog:                    # datadog configuration
+    host: '127.0.0.1'       # datadog statsd hostname or IP
+    port: 8125              # datadog statsd port
+
+consul:                     # consul clister configuration
+    host: '127.0.0.1'   # consil hostname or IP
+    port: 8500              # consul port
+    timeout: 1              # connection timeout (sec)
+
+debug: True                 # debug mode: enable (True) or disable (False)
+
+checks:                     # monitoring configuration
+    leader:                 # consul leader
+        change: True        # check leader change state = True, else False
+    peers:                  # consul peers
+        change: True        # check peers change state = True, else False
+        critical: 2         # minimum peers in cluster
+        warining: 2         # warining level peers in cluster
+    services:               # services 
+        check: True         # check services ( True )
+        onfail: True        # check node if service on fail state ( relevant, if node/check = False )
+        tags:               # check only spetsific tags
+            - master
+    nodes:                  # nodes
+        check: False        # check nodes ( True )
+        tags:               # check only spetsific tags
+            -  
+    
+    defaults:
+        string: False        # send strings as event : yes (True) or not (False)
+        boolean: False      # send boolean as event (True) or number (False)
+        number: 'set'       # possible : gauge , set, counter, histogram
+        events: 
+            enabled: True   # datadog events will be used (True) or not (False)
+            filtered: True  # send all strings as events (False), or only from list (True)
+        cluster: 
+            check: False    # allow check cluster (True) or not (False)
+            single: True    # check from all nodes (False) or only from arbitrator only (True)
+        instance: 
+            check: True     # allow node check (True) or not (False)
+            all: False      # check all instances (True) or only current (False)
+        

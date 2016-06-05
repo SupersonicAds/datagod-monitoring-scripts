@@ -235,4 +235,7 @@ _Pvt_Extensions
 .paket/paket.exe
 
 # FAKE - F# Make
-.fake/
+.fake
+
+# Python obj
+*.pyc

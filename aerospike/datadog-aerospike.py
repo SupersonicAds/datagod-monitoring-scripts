@@ -3,7 +3,7 @@
 ###############
 #
 # @name: Aerospike monitoring in datadog (using statsd)
-# @version: 2016/05/03
+# @version: 2016/06/05
 # @author: andris jegorov
 # @email: andris@ironsrc.com
 # @description: Aerospike monitoring in datadog script
@@ -12,158 +12,29 @@
 #
 ###############
 
-try:
-    from datadog import initialize, statsd
-except ImportError:
-    print '{E} python module "datadog" is not present in system. Please install using "pip install datadog".'
-    raise
+import os.path
+import sys
+import exceptions
+sys.path.append(os.path.abspath('../include'))
+
 try:
     import aerospike
     from aerospike.exception import AerospikeError
 except ImportError:
     print '{E} python module "aerospike" is not present in system. Please install using "pip install aerospike".'
     raise
+
 try:
-    import yaml
+    from isconfig import isconfig
 except ImportError:
-    print '{E} python module "yaml" is not present in system. Please install using "pip install yaml".'
+    print '{E} python module "isconfig" is not present in system.'
     raise
-import os.path
-import sys
-import exceptions
 
-class asConfig:
-    config = {}
-
-    def __init__(self):
-        self.hostname = os.uname()[1]
-        self.configfile = os.path.splitext(os.path.basename(__file__))[0]
-        # read and parse configuration
-        with open(self.configfile+'.yaml', mode='r') as stream:
-            try:
-                self.config = yaml.load(stream)
-                stream.close()
-            except yaml.YAMLError as err:
-                print '[E] config problem: {0}'.format(err)
-                raise
-
-class asEvents:
-    def __init__(self, config):
-        self.events = {}
-        self.config = config.config
-        self.configfile = config.configfile
-        if self.config['datadog']['defaults']['events']['enabled']:
-            if not os.path.isfile(self.configfile+'.events'):
-                try:
-                    open(self.configfile+'.events', 'a').close()
-                except IOError as e:
-                    print '[E] events file create problem: {0}'.format(e)
-                    raise
-
-            with open(self.configfile+'.events', mode='r') as stream:
-                try:
-                    self.events = yaml.safe_load(stream)
-                except (IOError, yaml.YAMLError) as e:
-                    pass
-                stream.close()
-
-    def isevent(self, key, value, cluster=False, service=False):
-        #print {key, value, cluster, service, self.events}
-        isevent = False
-        if self.events == None:
-            self.events = {}
-        if not cluster in dict(self.events):
-            self.events[cluster] = {}
-        if not service in self.events[cluster]:
-            self.events[cluster][service] = {}
-        if not key in self.events[cluster][service]:
-            self.events[cluster][service][key] = value
-        elif self.events[cluster][service][key] != value:
-            isevent = True
-            self.events[cluster][service][key] = value
-        return isevent
-
-    def finalize(self):
-        if self.config['datadog']['defaults']['events']['enabled']:
-            if os.path.isfile(self.configfile+'.events'):
-                try:
-                    with open(self.configfile+'.events', mode='w') as stream:
-                        yaml.safe_dump(self.events, stream=stream)
-                        stream.close()
-                except IOError as e:
-                    print '[E] events file create problem: {0}'.format(e)
-                    raise
-
-class asDataDog:
-    clustername = None
-
-    def __init__(self, config):
-        self.config = config.config
-        self.configfile = config.configfile
-        self.hostname = config.hostname
-        initialize(self.config['datadog']['host'], self.config['datadog']['port'])
-        self.events = asEvents(config)
-
-    def send(self, sensor, command, key, value, onlynode=False, nodehost=False):
-        datatype = 'string'
-        cnf = self.config['datadog']
-        mode = cnf['defaults']['number']
-
-        if value.isdigit(): # digital
-            datatype = 'number'
-        elif value.lower() in ('true', 'on', 'enable', 'enabled'): # boolean : true
-            if cnf['defaults']['boolean']:
-                value = 'true'
-                datatype = 'bool'
-            else:
-                value = 1
-                datatype = 'number'
-        elif value.lower() in ('false', 'off', 'disable', 'disabled'): # boolean : false
-            if cnf['defaults']['boolean']:
-                value = 'false'
-                datatype = 'bool'
-            else:
-                value = 0
-                datatype = 'number'
-        else:
-            try:
-                float(value)
-                datatype = 'number'
-            except ValueError:
-                mode = 'event'
-        if datatype == 'number':
-            cmd = command.split(':')[0].split('/')[0]
-            if cmd in cnf['histogram']['command'] or key in cnf['histogram']['key']:
-                mode = 'histogram'
-            elif cmd in cnf['gauge']['command'] or key in cnf['gauge']['key']:
-                mode = 'gauge'
-            elif cmd in cnf['set']['command'] or key in cnf['set']['key']:
-                mode = 'set'
-            elif cmd in cnf['counter']['command'] or key in cnf['counter']['key']:
-                mode = 'counter'
-
-        tags = ["nodename:{0}".format(self.hostname), "cluster:{0}".format(self.clustername), "group:{0}".format(command), "set:{0}".format("node" if onlynode else "cluster")]
-        ###print tags
-        if self.config['debug']:
-            print "{0}={2} type is {1} :: {3}".format(sensor, datatype, value, mode)
-        if datatype == 'number':
-            if mode == 'histogram':
-                statsd.histogram(metric=sensor, value=value, tags=tags)
-            elif mode == 'gauge':
-                statsd.gauge(metric=sensor, value=value, tags=tags)
-            elif mode == 'set':
-                statsd.set(metric=sensor, value=value, tags=tags)
-            elif mode == 'counter':
-                statsd.increment(metric=sensor, value=value, tags=tags)
-        elif cnf['defaults']['events']['enabled']: # strings boolean and unknown types, as events, if enabled
-            cmd = command.split(':')[0].split('/')[0]
-            if cnf['defaults']['events']['filtered'] == False or cmd in cnf['event']['command'] or key in cnf['event']['key']:
-                import socket
-                if self.events.isevent(key=sensor, value=value, cluster=self.clustername, service=self.hostname):
-                    statsd.event(title=sensor, text=value, tags=tags, hostname=socket.gethostname())
-
-    def finalize(self):
-        self.events.finalize()
+try:
+    from isdatadog import isdatadog
+except ImportError:
+    print '{E} python module "isdatadog" is not present in system.'
+    raise
 
 class asAeroSpike:
     clustername = None
@@ -172,7 +43,7 @@ class asAeroSpike:
     def __init__(self, config):
         self.config = config.config
         self.configfile = config.configfile
-        self.datadog = asDataDog(config)
+        self.datadog = isdatadog(config)
         try:
             # connect to aerospike cluster
             self.asclient = aerospike.client({'hosts': list((k, v) for (k, v) in self.config['aerospike']['hosts'])}).connect()
@@ -184,7 +55,7 @@ class asAeroSpike:
             self.isInit = 'false'
             sys.exit()
         finally:
-            self.datadog.send("aerospike.clustername.up", 'clustername', 'up', self.isInit, True)
+            self.send("aerospike.clustername.up", 'clustername', 'up', self.isInit, True)
 
     def process(self, onlynode=False):
         ## instance ( node ) statistics
@@ -235,11 +106,11 @@ class asAeroSpike:
                 nskey = ''
                 nstval = [val]
             if latency:
-                self.datadog.send("aerospike.{0}.{1}.time".format(cmd, nskey), command=command, key=nskey, value=nstval[0], onlynode=onlynode) # time
-                self.datadog.send("aerospike.{0}.{1}.opssec".format(cmd, nskey), command=command, key=nskey, value=nstval[1], onlynode=onlynode) # ops/sec
-                self.datadog.send("aerospike.{0}.{1}.more1ms".format(cmd, nskey), command=command, key=nskey, value=nstval[2], onlynode=onlynode) # >1ms
-                self.datadog.send("aerospike.{0}.{1}.more8ms".format(cmd, nskey), command=command, key=nskey, value=nstval[3], onlynode=onlynode) # >8ms
-                self.datadog.send("aerospike.{0}.{1}.more64ms".format(cmd, nskey), command=command, key=nskey, value=nstval[4], onlynode=onlynode) # >64ms
+                self.send("aerospike.{0}.{1}.time".format(cmd, nskey), command=command, key=nskey, value=nstval[0], onlynode=onlynode) # time
+                self.send("aerospike.{0}.{1}.opssec".format(cmd, nskey), command=command, key=nskey, value=nstval[1], onlynode=onlynode) # ops/sec
+                self.send("aerospike.{0}.{1}.more1ms".format(cmd, nskey), command=command, key=nskey, value=nstval[2], onlynode=onlynode) # >1ms
+                self.send("aerospike.{0}.{1}.more8ms".format(cmd, nskey), command=command, key=nskey, value=nstval[3], onlynode=onlynode) # >8ms
+                self.send("aerospike.{0}.{1}.more64ms".format(cmd, nskey), command=command, key=nskey, value=nstval[4], onlynode=onlynode) # >64ms
                 continue
             else:
                 for nsdataval in nstval:
@@ -249,20 +120,69 @@ class asAeroSpike:
                     else:
                         (dkey, dval) = ddict
                         if ns:
-                            self.datadog.send("aerospike.{0}.{1}.{2}".format(cmd, nskey, dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
+                            self.send("aerospike.{0}.{1}.{2}".format(cmd, nskey, dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
                         elif sets:
                             if command == 'sets':
                                 if dkey in ('ns_name', 'set_name'):
                                     nsval[dkey] = dval
                                 elif not nodatadog:
-                                    self.datadog.send("aerospike.{0}.{1}.{2}.{3}".format(cmd, nsval['ns_name'], nsval['set_name'], dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
+                                    self.send("aerospike.{0}.{1}.{2}.{3}".format(cmd, nsval['ns_name'], nsval['set_name'], dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
                             elif command == 'sindex':
                                 if dkey in ('ns', 'set', 'indexname'):
                                     nsval[dkey] = dval
                                 elif not nodatadog:
-                                    self.datadog.send("aerospike.{0}.{1}.{2}.{3}".format(cmd, nsval['ns'], nsval['set'], dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
+                                    self.send("aerospike.{0}.{1}.{2}.{3}".format(cmd, nsval['ns'], nsval['set'], dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
                         elif not nodatadog:
-                            self.datadog.send("aerospike.{0}.{1}".format(cmd, dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
+                            self.send("aerospike.{0}.{1}".format(cmd, dkey), command=command, key=dkey, value=dval, onlynode=onlynode)
+
+    def send(self, metric, command, key, value, onlynode=False, nodehost=False, tags=False):
+        datatype = 'string'
+        cnf = self.config['checks']
+        mode = cnf['defaults']['number']
+
+        if value.isdigit(): # digital
+            datatype = 'number'
+        elif value.lower() in ('true', 'on', 'enable', 'enabled'): # boolean : true
+            if cnf['defaults']['boolean']:
+                value = 'true'
+                datatype = 'bool'
+            else:
+                value = 1
+                datatype = 'number'
+        elif value.lower() in ('false', 'off', 'disable', 'disabled'): # boolean : false
+            if cnf['defaults']['boolean']:
+                value = 'false'
+                datatype = 'bool'
+            else:
+                value = 0
+                datatype = 'number'
+        else:
+            try:
+                float(value)
+                datatype = 'number'
+            except ValueError:
+                mode = 'event'
+        if datatype == 'number':
+            cmd = command.split(':')[0].split('/')[0]
+            if cmd in cnf['histogram']['command'] or key in cnf['histogram']['key']:
+                mode = 'histogram'
+            elif cmd in cnf['gauge']['command'] or key in cnf['gauge']['key']:
+                mode = 'gauge'
+            elif cmd in cnf['set']['command'] or key in cnf['set']['key']:
+                mode = 'set'
+            elif cmd in cnf['counter']['command'] or key in cnf['counter']['key']:
+                mode = 'counter'
+
+        if tags == False:
+            tags = ["nodename:{0}".format(self.datadog.hostname), "cluster:{0}".format(self.clustername), "group:{0}".format(command), "set:{0}".format("node" if onlynode else "cluster")]
+
+        if datatype == 'number':
+            self.datadog.number(metric=metric, value=value, tags=tags, mode=mode)
+        elif cnf['defaults']['events']['enabled']: # strings boolean and unknown types, as events, if enabled
+            cmd = command.split(':')[0].split('/')[0]
+            if cnf['defaults']['events']['filtered'] == False or cmd in cnf['event']['command'] or key in cnf['event']['key']:
+                if self.datadog.isevent(key=metric, value=value, cluster=self.clustername, service=self.datadog.hostname):
+                    self.datadog.event(metric=metric, value=value, tags=tags)
 
     def finalize(self):
         if self.asclient != None:
@@ -273,21 +193,21 @@ class asMonitoring:
     aerospike = None
 
     def __init__(self):
-        self.config = asConfig()
+        self.config = isconfig(os.path.splitext(os.path.basename(__file__))[0])
 
     def execute(self):
         self.aerospike = asAeroSpike(self.config)
         config = self.config.config
-        if config['datadog']['defaults']['cluster']['check']:
-            if config['datadog']['defaults']['cluster']['single']:
+        if config['checks']['defaults']['cluster']['check']:
+            if config['checks']['defaults']['cluster']['single']:
                 # check only from arbitrator instance
                 # @ToDo will be implemented later
                 self.aerospike.process(onlynode=False)
             else:
                 # check from all instances from cluster
                 self.aerospike.process(onlynode=False)
-        if config['datadog']['defaults']['instance']['check']:
-            if config['datadog']['defaults']['instance']['all']:
+        if config['checks']['defaults']['instance']['check']:
+            if config['checks']['defaults']['instance']['all']:
                 # detect and in loop check all instances from cluster
                 # @ToDo will be implemented later
                 self.aerospike.process(onlynode=True)
