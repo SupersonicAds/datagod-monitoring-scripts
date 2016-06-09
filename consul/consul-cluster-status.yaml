@@ -1,3 +1,15 @@
+###############
+#
+# @name: Consul cluster status monitoring in datadog (using statsd)
+# @version: 2016/06/07
+# @author: andris jegorov
+# @email: andris@ironsrc.com
+# @description: Consul cluster status monitoring in datadog configuration file
+# @licence: MIT
+# @copyright (c) 2016 IronSource Mobile
+#
+###############
+
 datadog:                    # datadog configuration
     host: '127.0.0.1'       # datadog statsd hostname or IP
     port: 8125              # datadog statsd port
@@ -5,7 +17,7 @@ datadog:                    # datadog configuration
 consul:                     # consul clister configuration
     host: '127.0.0.1'   # consil hostname or IP
     port: 8500              # consul port
-    timeout: 1              # connection timeout (sec)
+    timeout: 5               # connection timeout (sec)
 
 debug: True                 # debug mode: enable (True) or disable (False)
 
@@ -27,16 +39,7 @@ checks:                     # monitoring configuration
             -  
     
     defaults:
-        string: False        # send strings as event : yes (True) or not (False)
-        boolean: False      # send boolean as event (True) or number (False)
         number: 'set'       # possible : gauge , set, counter, histogram
         events: 
             enabled: True   # datadog events will be used (True) or not (False)
-            filtered: True  # send all strings as events (False), or only from list (True)
-        cluster: 
-            check: False    # allow check cluster (True) or not (False)
-            single: True    # check from all nodes (False) or only from arbitrator only (True)
-        instance: 
-            check: True     # allow node check (True) or not (False)
-            all: False      # check all instances (True) or only current (False)
         
