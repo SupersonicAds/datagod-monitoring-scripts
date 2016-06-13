@@ -33,6 +33,8 @@ except ImportError:
     print '{E} python module "isdatadog" is not present in system.'
     raise
 
+import urllib2
+
 class cMonitoring:
     consul = None
 
@@ -50,14 +52,14 @@ class cMonitoring:
         try:
             leader = self.consul.call('/v1/status/leader?stale')
             if leader != False:
-                self.datadog.gauge('consule.cluter.up', 'on')
+                self.datadog.gauge('consule.cluster.up', 'on')
             else:
-                self.datadog.gauge('consule.cluter.up', 'off')
-                self.datadog.event('consule.cluter.up', 'Got HTTP error [{0}]:{1}'.format(self.consul.lastcode, self.consul.lasterror), tags=['critical'])
+                self.datadog.gauge('consule.cluster.up', 'off')
+                self.datadog.event('consule.cluster.up', 'Got HTTP error [{0}]:{1}'.format(self.consul.lastcode, self.consul.lasterror), tags=['critical'])
                 sys.exit()
         except urllib2.URLError, e:
-            self.datadog.gauge('consule.cluter.up', 'off')
-            self.datadog.event('consule.cluter.up', 'Got URL error: {0}'.format(e.reason), tags=['critical'])
+            self.datadog.gauge('consule.cluster.up', 'off')
+            self.datadog.event('consule.cluster.up', 'Got URL error: {0}'.format(e.reason), tags=['critical'])
             sys.exit()
         # check peers count in cluster
         peers = self.consul.call('/v1/status/peers?stale')

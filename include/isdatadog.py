@@ -86,13 +86,13 @@ class isdatadog:
         if mode == False:
             mode = self.config['number']
         if mode == 'histogram':
-            statsd.histogram(metric=metric, value=value, tags=tags)
+            self.histogram(metric=metric, value=value, tags=tags)
         elif mode == 'gauge':
-            statsd.gauge(metric=metric, value=value, tags=tags)
+            self.gauge(metric=metric, value=value, tags=tags)
         elif mode == 'set':
-            statsd.set(metric=metric, value=value, tags=tags)
+            self.set(metric=metric, value=value, tags=tags)
         elif mode == 'counter':
-            statsd.increment(metric=metric, value=value, tags=tags)
+            self.counter(metric=metric, value=value, tags=tags)
 
     def histogram(self, metric, value, tags=[]):
         statsd.histogram(metric=metric, value=value, tags=tags)
