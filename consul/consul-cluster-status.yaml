@@ -37,9 +37,13 @@ checks:                     # monitoring configuration
         check: False        # check nodes ( True )
         tags:               # check only spetsific tags
             -  
-    
     defaults:
+        leaderonly: True    # check only leader ( True )
         number: 'set'       # possible : gauge , set, counter, histogram
+        boolean:
+            enabled: False     # send boolean as event (True) or number (False)
+            convert: True      # convert boolean to integer: 0 or 1 - (True) or not (False)
+            type: 'gauge'      # boolean types : gauge , set, counter, histogram or event
         events: 
             enabled: True   # datadog events will be used (True) or not (False)
         

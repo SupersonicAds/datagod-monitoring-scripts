@@ -81,6 +81,35 @@ class isdatadog:
         initialize(config.config['datadog']['host'], config.config['datadog']['port'])
         if self.config['events']['enabled']:
             self.events = isevents(config)
+        if 'boolean' in self.config:
+            self.boolean = self.config['boolean']['enabled'] if 'enabled' in self.config['boolean'] else False
+            self.boolconvert = ('convert' in self.config['boolean'] and self.config['boolean']['convert'])
+            self.booltype = self.config['boolean']['type'] if 'type' in self.config['boolean'] else 'gauge'
+        else:
+            self.boolean = False
+            self.boolconvert = False
+            self.booltype = 'gauge'
+
+    def bool(self, metric, value, tags=[]):
+        if self.boolean:
+            mode = 'number'
+            if value.isdigit():
+                pass
+            elif value.lower() in ('1', 'true', 'on', 'enable', 'enabled'): # boolean : true
+                if self.boolconvert:
+                    value = '1'
+            elif value.lower() in ('0', 'false', 'off', 'disable', 'disabled'): # boolean : false
+                if self.boolconvert:
+                    value = '0'
+            else:
+                try:
+                    float(value)
+                except ValueError:
+                    mode = 'event'
+            if mode == 'event':
+                self.event(metric, value, tags)
+            else:
+                self.number(metric, value, tags, mode=self.booltype)
 
     def number(self, metric, value, tags=[], mode=False):
         if mode == False:

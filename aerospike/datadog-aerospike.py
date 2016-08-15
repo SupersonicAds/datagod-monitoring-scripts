@@ -143,14 +143,14 @@ class asAeroSpike:
         if value.isdigit(): # digital
             datatype = 'number'
         elif value.lower() in ('true', 'on', 'enable', 'enabled'): # boolean : true
-            if cnf['defaults']['boolean']:
+            if cnf['defaults']['boolean']['enabled']:
                 value = 'true'
                 datatype = 'bool'
             else:
                 value = 1
                 datatype = 'number'
         elif value.lower() in ('false', 'off', 'disable', 'disabled'): # boolean : false
-            if cnf['defaults']['boolean']:
+            if cnf['defaults']['boolean']['enabled']:
                 value = 'false'
                 datatype = 'bool'
             else:

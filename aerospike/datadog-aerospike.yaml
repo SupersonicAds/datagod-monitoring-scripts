@@ -49,7 +49,8 @@ checks:
             - conflict-resolution-policy
     defaults:
         string: True        # send strings as event : yes (True) or not (False)
-        boolean: False      # send boolean as event (True) or number (False)
+        boolean:
+            enabled: False      # send boolean as event (True) or number (False)
         number: 'set'       # possible : gauge , set, counter, histogram
         events: 
             enabled: True   # datadog events will be used (True) or not (False)

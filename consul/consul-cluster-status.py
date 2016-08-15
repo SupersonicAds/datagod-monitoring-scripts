@@ -44,23 +44,25 @@ class cMonitoring:
         self.datadog = isdatadog(self.config)
 
     def execute(self):
-        # debug : BEGIN
-        # result = []
-        # debug : END
         config = self.config.config['checks']
         # check master in cluster
         try:
             leader = self.consul.call('/v1/status/leader?stale')
             if leader != False:
-                self.datadog.gauge('consule.cluster.up', 'on')
+                self.datadog.bool('consule.cluster.up', 'on')
             else:
-                self.datadog.gauge('consule.cluster.up', 'off')
+                self.datadog.bool('consule.cluster.up', 'off')
                 self.datadog.event('consule.cluster.up', 'Got HTTP error [{0}]:{1}'.format(self.consul.lastcode, self.consul.lasterror), tags=['critical'])
                 sys.exit()
         except urllib2.URLError, e:
-            self.datadog.gauge('consule.cluster.up', 'off')
+            self.datadog.bool('consule.cluster.up', 'off')
             self.datadog.event('consule.cluster.up', 'Got URL error: {0}'.format(e.reason), tags=['critical'])
             sys.exit()
+        # check only leader?
+        if config['defaults']['leaderonly']:
+            self_data = self.consul.call('/v1/agent/self')
+            if '{0}:{1}'.format(self_data['Member']['Addr'], self_data['Member']['Tags']['port']) != leader:
+                return
         # check peers count in cluster
         peers = self.consul.call('/v1/status/peers?stale')
         # check peers count crit, warn
@@ -86,17 +88,18 @@ class cMonitoring:
         for dc in datacenters:
             # check services status in cluster
             if config['services']['check']:
-                tag = ','.join(config['services']['tags']) if config['services']['tags'] != None else ""
+                tag = '&tag={0}'.format(','.join(config['services']['tags'])) if config['services']['tags'] != None else ""
                 services = self.consul.call('/v1/catalog/services?stale&dc={0}'.format(dc))
                 # result.append(services)
                 for service in services:
-                    data = self.consul.call('/v1/health/service/{0}?stale&dc={1}&tag={2}'.format(service, dc, tag))
+                    data = self.consul.call('/v1/health/service/{0}?stale&dc={1}{2}'.format(service, dc, tag))
                     # result.append(data)
                     if len(data) > 0:
                         # result.append(data)
-                        for check in data[0]['Checks']:
-                            if check['Status'] != 'passing':
-                                self.datadog.event('consule.service.{0}.{1}.{2}'.format(check['Node'], service, check['CheckID']), 'On node {0}, service "{1}" check {2} on {3} state: {4}. '.format(check['Node'], service, check['Name'], check['Status'], check['Output']), tags=['critical'])
+                        for service_item in data:
+                            for check in service_item['Checks']:
+                                if check['Status'] != 'passing':
+                                    self.datadog.event('consule.service.{0}.{1}.{2}'.format(check['Node'], service, check['CheckID']), 'On node {0}, service "{1}" check {2} on {3} state: {4}. '.format(check['Node'], service, check['Name'], check['Status'], check['Output']), tags=['critical'])
 
             # check nodes status in cluster
             if config['nodes']['check']:
@@ -111,11 +114,6 @@ class cMonitoring:
             envkeys = self.consul.call('/v1/kv/consul-template/{0}/?stale'.format(env))
             if envkeys == False or envkeys == None or envkeys == '':
                 self.datadog.event('consule.kv.{0}.consul-template'.format(env), 'Environment {0} does not exists in consul KV.'.format(env), tags=['critical'])
-
-        # debug : BEGIN
-        # for data in result:
-        #     print data
-        # debug : END
 
     def finalize(self):
         pass
